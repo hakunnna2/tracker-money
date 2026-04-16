@@ -123,22 +123,19 @@ export default function DashboardView({
   }, [transactions]);
 
   const categoryTotals = useMemo(() => {
-    const totals: Record<string, number> = {
-      Food: 0,
-      Transport: 0,
-      Rent: 0,
-      Leisure: 0,
-      Other: 0,
-    };
+    const totals: Record<string, number> = {};
 
     for (const t of transactions) {
-      if (t.type === 'expense' && totals[t.category] !== undefined) {
-        totals[t.category] += t.amount;
+      if (t.type === 'expense') {
+        totals[t.category] = (totals[t.category] || 0) + t.amount;
       }
     }
 
-    const maxAmount = Math.max(...Object.values(totals), 1);
-    return { totals, maxAmount };
+    const categoryEntries = Object.entries(totals)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+    const maxAmount = Math.max(...categoryEntries.map(([, amount]) => amount), 1);
+    return { categoryEntries, maxAmount };
   }, [transactions]);
 
   const budgetSpentPercent = Math.min(100, (stats.currentMonthExpenses / (budget.monthlyLimit || 1)) * 100);
@@ -259,17 +256,14 @@ export default function DashboardView({
         <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-brand border border-slate-100">
           <h3 className="font-bold mb-6">Spending by Category</h3>
           <div className="flex flex-col gap-5">
-            {['Food', 'Transport', 'Rent', 'Leisure', 'Other'].map((cat) => {
-              const amount = categoryTotals.totals[cat] || 0;
+            {categoryTotals.categoryEntries.length === 0 && (
+              <p className="text-sm text-brand-muted">No expense categories yet.</p>
+            )}
+            {categoryTotals.categoryEntries.map(([cat, amount], index) => {
               const percent = (amount / categoryTotals.maxAmount) * 100;
 
-              const colors: Record<string, string> = {
-                Food: 'bg-blue-400',
-                Transport: 'bg-amber-400',
-                Rent: 'bg-emerald-400',
-                Leisure: 'bg-rose-400',
-                Other: 'bg-slate-400',
-              };
+              const colorCycle = ['bg-blue-400', 'bg-amber-400', 'bg-emerald-400', 'bg-rose-400', 'bg-slate-400'];
+              const colorClass = colorCycle[index % colorCycle.length];
 
               return (
                 <div key={cat} className="space-y-1.5">
@@ -278,7 +272,7 @@ export default function DashboardView({
                     <span className="text-brand-muted">{formatCurrency(amount, currency)}</span>
                   </div>
                   <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${percent}%` }} className={`h-full ${colors[cat] || 'bg-slate-400'}`} />
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${percent}%` }} className={`h-full ${colorClass}`} />
                   </div>
                 </div>
               );

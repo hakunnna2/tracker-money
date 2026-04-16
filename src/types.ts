@@ -1,7 +1,7 @@
 
 export type TransactionType = 'income' | 'expense' | 'transfer';
 
-export type Category = 'Food' | 'Transport' | 'Rent' | 'Leisure' | 'Other' | 'Income' | 'Transfer';
+export type Category = string;
 
 export type Currency = 'MAD';
 
