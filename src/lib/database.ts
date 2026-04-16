@@ -85,5 +85,11 @@ export const database = {
   updateCurrency: (currency: 'MAD' | 'USD' | 'EUR') => {
     const settings = database.getSettings();
     database.saveSettings({ ...settings, currency });
+  },
+
+  clearAllData: () => {
+    Object.values(STORAGE_KEYS).forEach((key) => {
+      localStorage.removeItem(key);
+    });
   }
 };

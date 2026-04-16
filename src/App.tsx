@@ -35,20 +35,17 @@ import {
   ArrowDownCircle,
   Building2,
   PlusCircle,
-  Download,
-  LogOut
+  Download
 } from 'lucide-react';
 import { Transaction, Budget, Goal, Category, TransactionType, Account, Currency } from './types.ts';
 import { database } from './lib/database.ts';
 import { predictEndOfMonth } from './lib/ml.ts';
 import { formatCurrency } from './lib/currency.ts';
-import { isAuthenticated, logout } from './lib/auth.ts';
-import AuthScreen from './components/AuthScreen.tsx';
+import { clearAllAuthData } from './lib/auth.ts';
 
 type Tab = 'Dashboard' | 'Transactions' | 'Budget' | 'Predictions' | 'Goals' | 'Accounts' | 'Settings';
 
 export default function App() {
-  const [isAuth, setIsAuth] = useState(isAuthenticated());
   const [activeTab, setActiveTab] = useState<Tab>('Dashboard');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -118,19 +115,6 @@ export default function App() {
       setGoals(existingGoals);
     }
   }, []);
-
-  const handleLogout = () => {
-    logout();
-    setIsAuth(false);
-  };
-
-  const handleAuthenticated = () => {
-    setIsAuth(true);
-  };
-
-  if (!isAuth) {
-    return <AuthScreen onAuthenticated={handleAuthenticated} />;
-  }
 
 
   // Stats
@@ -218,20 +202,13 @@ export default function App() {
           ))}
         </ul>
 
-        <div className="pt-6 border-t border-slate-100 space-y-3">
+        <div className="pt-6 border-t border-slate-100">
           {budgetSpentPercent > 90 && (
             <div className="bg-red-50 border border-red-100 text-brand-danger p-3 rounded-xl text-xs font-semibold flex items-center gap-2">
               <AlertTriangle size={14} />
               Budget limit exceeded!
             </div>
           )}
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors font-medium text-sm"
-          >
-            <LogOut size={18} />
-            Logout
-          </button>
         </div>
       </nav>
 
@@ -499,7 +476,16 @@ export default function App() {
                 setCurrency(curr);
                 database.updateCurrency(curr);
               }}
-              onLogout={handleLogout}
+              onClearData={() => {
+                const confirmed = window.confirm('This will delete all transactions, goals, accounts, budget settings, and your PIN. Start fresh?');
+                if (!confirmed) {
+                  return;
+                }
+
+                clearAllAuthData();
+                database.clearAllData();
+                window.location.reload();
+              }}
             />
           )}
         </AnimatePresence>
@@ -536,15 +522,6 @@ export default function App() {
             <span className="text-[9px] font-bold uppercase tracking-tight">{item.id === 'Transactions' ? 'History' : item.id}</span>
           </button>
         ))}
-        <button 
-          onClick={handleLogout}
-          className={`
-            flex flex-col items-center gap-1 flex-1 transition-colors text-slate-400 hover:text-slate-600
-          `}
-        >
-          <LogOut size={20} />
-          <span className="text-[9px] font-bold uppercase tracking-tight">Logout</span>
-        </button>
       </nav>
     </div>
   );
@@ -1099,7 +1076,7 @@ function AddTransactionModal({ onClose, onAdd, accounts }: { onClose: () => void
   );
 }
 
-function SettingsView({ currency, onCurrencyChange, onLogout }: { currency: Currency, onCurrencyChange: (curr: Currency) => void, onLogout: () => void }) {
+function SettingsView({ currency, onCurrencyChange, onClearData }: { currency: Currency, onCurrencyChange: (curr: Currency) => void, onClearData: () => void }) {
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -1133,11 +1110,11 @@ function SettingsView({ currency, onCurrencyChange, onLogout }: { currency: Curr
             <p className="text-lg font-semibold">Hakunna</p>
           </div>
           <button 
-            onClick={onLogout}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl font-bold transition-colors"
+            onClick={onClearData}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl font-bold transition-colors"
           >
-            <LogOut size={18} />
-            Logout
+            <Trash2 size={18} />
+            Clear data and start fresh
           </button>
           <p className="text-xs text-brand-muted text-center">You will be prompted to enter your PIN on next login</p>
         </div>

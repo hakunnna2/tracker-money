@@ -6,7 +6,28 @@ const AUTH_KEYS = {
   PIN_HASH: 'copilot_pin_hash',
   AUTH_TOKEN: 'copilot_auth_token',
   BIOMETRIC_ENABLED: 'copilot_biometric_enabled',
+  BIOMETRIC_CREDENTIAL_ID: 'copilot_biometric_credential_id',
 };
+
+function bufferToBase64Url(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function base64UrlToBuffer(value: string): Uint8Array {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
 
 /**
  * Simple SHA256 hash (for demo purposes)
@@ -85,6 +106,51 @@ export function isBiometricEnabled(): boolean {
  */
 export function disableBiometric(): void {
   localStorage.removeItem(AUTH_KEYS.BIOMETRIC_ENABLED);
+  localStorage.removeItem(AUTH_KEYS.BIOMETRIC_CREDENTIAL_ID);
+}
+
+export async function registerBiometricCredential(): Promise<boolean> {
+  if (!window.PublicKeyCredential) {
+    return false;
+  }
+
+  try {
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+    const userId = crypto.getRandomValues(new Uint8Array(16));
+
+    const credential = (await navigator.credentials.create({
+      publicKey: {
+        challenge,
+        rp: {
+          name: 'Smart Financial Copilot',
+          id: window.location.hostname,
+        },
+        user: {
+          id: userId,
+          name: 'user@copilot.local',
+          displayName: 'Copilot User',
+        },
+        pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          userVerification: 'required',
+        },
+        attestation: 'none',
+        timeout: 60000,
+      } as PublicKeyCredentialCreationOptions,
+    })) as PublicKeyCredential | null;
+
+    if (!credential) {
+      return false;
+    }
+
+    localStorage.setItem(AUTH_KEYS.BIOMETRIC_CREDENTIAL_ID, bufferToBase64Url(credential.rawId));
+    enableBiometric();
+    return true;
+  } catch (error) {
+    console.error('Biometric registration failed:', error);
+    return false;
+  }
 }
 
 /**
@@ -96,56 +162,27 @@ export async function authenticateWithBiometric(): Promise<boolean> {
   }
 
   try {
-    // Get stored credential ID (this is a simplified version)
-    const credentialId = localStorage.getItem('copilot_credential_id');
+    const credentialId = localStorage.getItem(AUTH_KEYS.BIOMETRIC_CREDENTIAL_ID);
     if (!credentialId) {
-      // First time setup - generate credential
-      const challenge = crypto.getRandomValues(new Uint8Array(32));
-      
-      const credential = await navigator.credentials.create({
-        publicKey: {
-          challenge: challenge,
-          rp: {
-            name: 'Smart Financial Copilot',
-            id: window.location.hostname,
-          },
-          user: {
-            id: new Uint8Array(16),
-            name: 'user@copilot.local',
-            displayName: 'Copilot User',
-          },
-          pubKeyCredParams: [{ alg: -7, type: 'public-key' }],
-          attestation: 'none',
-          authenticatorSelection: {
-            authenticatorAttachment: 'platform',
-            userVerification: 'required',
-          },
-        } as PublicKeyCredentialCreationOptions,
-      }) as PublicKeyCredential | null;
-
-      if (credential) {
-        localStorage.setItem('copilot_credential_id', credential.id);
-        return true;
-      }
-    } else {
-      // Authenticate with existing credential
-      const challenge = crypto.getRandomValues(new Uint8Array(32));
-      const assertion = await navigator.credentials.get({
-        publicKey: {
-          challenge: challenge,
-          allowCredentials: [
-            {
-              id: Uint8Array.from(atob(credentialId), c => c.charCodeAt(0)),
-              type: 'public-key',
-              transports: ['internal'],
-            },
-          ],
-          userVerification: 'required',
-        } as PublicKeyCredentialRequestOptions,
-      }) as PublicKeyCredential | null;
-
-      return !!assertion;
+      return false;
     }
+
+    const assertion = (await navigator.credentials.get({
+      publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)),
+        allowCredentials: [
+          {
+            id: base64UrlToBuffer(credentialId),
+            type: 'public-key',
+            transports: ['internal'],
+          },
+        ],
+        userVerification: 'required',
+        timeout: 60000,
+      } as PublicKeyCredentialRequestOptions,
+    })) as PublicKeyCredential | null;
+
+    return !!assertion;
   } catch (error) {
     console.error('Biometric authentication failed:', error);
     return false;
@@ -179,4 +216,11 @@ export function isAuthenticated(): boolean {
  */
 export function logout(): void {
   clearAuthToken();
+}
+
+export function clearAllAuthData(): void {
+  localStorage.removeItem(AUTH_KEYS.PIN_HASH);
+  localStorage.removeItem(AUTH_KEYS.AUTH_TOKEN);
+  localStorage.removeItem(AUTH_KEYS.BIOMETRIC_ENABLED);
+  localStorage.removeItem(AUTH_KEYS.BIOMETRIC_CREDENTIAL_ID);
 }

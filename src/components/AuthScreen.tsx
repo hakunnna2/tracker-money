@@ -5,10 +5,10 @@ import {
   setupPIN,
   verifyPIN,
   isPINSetup,
+  registerBiometricCredential,
   authenticateWithBiometric,
   isBiometricAvailable,
   isBiometricEnabled,
-  enableBiometric,
   setAuthToken,
 } from '../lib/auth';
 
@@ -30,14 +30,6 @@ export default function AuthScreen({ onAuthenticated }: AuthScreenProps) {
       setMode('login');
       // Check biometric availability
       isBiometricAvailable().then(setBiometricAvailable);
-      if (isBiometricEnabled()) {
-        setMode('biometric');
-      }
-    }
-
-    // Try biometric on mount if enabled
-    if (isBiometricEnabled()) {
-      attemptBiometric();
     }
   }, []);
 
@@ -79,12 +71,12 @@ export default function AuthScreen({ onAuthenticated }: AuthScreenProps) {
       // Check if biometric is available
       const bioAvailable = await isBiometricAvailable();
       if (bioAvailable) {
-        enableBiometric();
+        await registerBiometricCredential();
         setBiometricAvailable(true);
-        setMode('biometric');
-      } else {
-        onAuthenticated();
       }
+
+      // Enter app immediately after successful PIN setup.
+      onAuthenticated();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Setup failed');
     } finally {
@@ -270,7 +262,7 @@ export default function AuthScreen({ onAuthenticated }: AuthScreenProps) {
           </button>
         </form>
 
-        {biometricAvailable && (
+        {biometricAvailable && isBiometricEnabled() && (
           <button
             onClick={() => setMode('biometric')}
             className="w-full mt-4 flex items-center justify-center gap-2 text-blue-500 hover:text-blue-600 font-semibold py-2"
