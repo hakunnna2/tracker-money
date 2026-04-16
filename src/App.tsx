@@ -509,6 +509,7 @@ export default function App() {
           { id: 'Budget', icon: Settings },
           { id: 'Predictions', icon: TrendingUp },
           { id: 'Goals', icon: Target },
+          { id: 'Settings', icon: Settings },
         ].map((item) => (
           <button 
             key={item.id}
