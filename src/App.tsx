@@ -166,7 +166,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen w-full overflow-hidden bg-brand-bg font-sans flex-col lg:flex-row">
+    <div className="flex min-h-dvh w-full overflow-x-hidden bg-brand-bg font-sans flex-col lg:flex-row">
       {/* Sidebar - Desktop Only */}
       <nav className="hidden lg:flex w-64 bg-white border-r border-slate-200 p-6 flex-col">
         <div className="flex items-center gap-3 text-brand-blue font-extrabold text-xl mb-10">
@@ -213,17 +213,17 @@ export default function App() {
       </nav>
 
       {/* Main Content */}
-      <main className="flex-1 p-4 lg:p-8 overflow-y-auto relative flex flex-col gap-6 lg:gap-8 pb-24 lg:pb-8">
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <main className="flex-1 min-h-0 min-w-0 p-3 sm:p-4 lg:p-8 overflow-y-auto overflow-x-hidden relative flex flex-col gap-4 sm:gap-6 lg:gap-8 pb-[calc(7rem+env(safe-area-inset-bottom))] lg:pb-8">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
           <div>
-            <h1 className="text-xl lg:text-2xl font-bold">Hello, Hakunna</h1>
-            <p className="text-xs lg:text-sm text-brand-muted">
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold">Hello, Hakunna</h1>
+            <p className="text-[11px] sm:text-xs lg:text-sm text-brand-muted">
               Your financial status for {new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(new Date())}
             </p>
           </div>
           <button 
             onClick={() => setIsAddTxModalOpen(true)}
-            className="w-full sm:w-auto bg-brand-blue hover:bg-blue-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-blue-100 cursor-pointer"
+            className="w-full sm:w-auto bg-brand-blue hover:bg-blue-600 text-white px-4 sm:px-5 py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-md shadow-blue-100 cursor-pointer"
           >
             <Plus size={18} />
             Add Transaction
@@ -237,32 +237,32 @@ export default function App() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="flex flex-col gap-6 lg:gap-8"
+              className="flex flex-col gap-4 sm:gap-6 lg:gap-8"
             >
               {/* Stats Grid */}
-              <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+              <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
                 <StatCard label="Total Balance" value={stats.totalBalance} />
                 <StatCard label="Monthly Income" value={stats.currentMonthIncome} type="income" />
                 <StatCard label="Monthly Expenses" value={stats.currentMonthExpenses} type="expense" />
               </section>
 
               {/* Middle Row */}
-              <section className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-                <div className="lg:col-span-2 bg-slate-900 rounded-3xl p-6 lg:p-8 text-white shadow-xl flex flex-col justify-between overflow-hidden relative min-h-[180px] lg:min-h-[200px]">
+              <section className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+                <div className="lg:col-span-2 bg-slate-900 rounded-3xl p-5 sm:p-6 lg:p-8 text-white shadow-xl flex flex-col justify-between overflow-hidden relative min-h-[180px] lg:min-h-[200px]">
                   <div className="absolute -right-20 -top-20 w-64 h-64 bg-brand-blue/10 rounded-full blur-3xl"></div>
                   <div className="flex items-center gap-3 mb-6 relative z-10">
                     <span className="font-semibold text-sm lg:text-base">Prediction Engine</span>
                     <span className="bg-white/10 px-2 py-0.5 rounded text-[8px] lg:text-[10px] uppercase tracking-wider font-bold">LR Model v1.0</span>
                   </div>
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 relative z-10">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 relative z-10">
                     <div>
                       <p className="text-slate-400 text-xs lg:text-sm">End of Month Forecast</p>
-                      <h3 className="text-2xl lg:text-3xl font-bold my-1 lg:my-2 ml-0">${prediction.forecast.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
+                      <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold my-1 lg:my-2 ml-0">${prediction.forecast.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
                       <p className="text-[10px] text-slate-500">Projected total spending</p>
                     </div>
                     <div className="sm:text-right">
                       <p className="text-slate-400 text-xs lg:text-sm">Projected Savings</p>
-                      <h3 className={`text-2xl lg:text-3xl font-bold my-1 lg:my-2 ml-0 ${prediction.savings >= 0 ? 'text-brand-success' : 'text-brand-danger'}`}>
+                      <h3 className={`text-xl sm:text-2xl lg:text-3xl font-bold my-1 lg:my-2 ml-0 ${prediction.savings >= 0 ? 'text-brand-success' : 'text-brand-danger'}`}>
                         {prediction.savings >= 0 ? '+' : ''}${prediction.savings.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </h3>
                       <p className="text-[10px] text-slate-500">Remaining after forecast</p>
@@ -270,10 +270,10 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-3xl p-6 lg:p-8 shadow-brand border border-slate-100 flex flex-col justify-between">
+                <div className="bg-white rounded-3xl p-5 sm:p-6 lg:p-8 shadow-brand border border-slate-100 flex flex-col justify-between">
                   <div>
                     <p className="text-[10px] uppercase font-bold tracking-widest text-brand-muted mb-2">Monthly Budget</p>
-                    <h3 className="text-xl lg:text-2xl font-bold">${budget.monthlyLimit.toLocaleString()}</h3>
+                    <h3 className="text-lg sm:text-xl lg:text-2xl font-bold">${budget.monthlyLimit.toLocaleString()}</h3>
                   </div>
                   <div className="mt-4 lg:mt-6 flex flex-col gap-2">
                     <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
@@ -292,7 +292,7 @@ export default function App() {
               </section>
 
               {/* Trend Chart Row */}
-              <section className="bg-white rounded-3xl p-6 lg:p-8 shadow-brand border border-slate-100 overflow-hidden">
+              <section className="bg-white rounded-3xl p-5 sm:p-6 lg:p-8 shadow-brand border border-slate-100 overflow-hidden">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 lg:mb-8">
                   <div>
                     <h3 className="font-bold text-lg">Spending Trend</h3>
@@ -303,7 +303,7 @@ export default function App() {
                     <span className="text-[10px] font-bold text-brand-muted uppercase tracking-wider">Expenses</span>
                   </div>
                 </div>
-                <div className="h-[250px] lg:h-[300px] w-full">
+                <div className="h-[220px] sm:h-[250px] lg:h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -344,8 +344,8 @@ export default function App() {
               </section>
 
               {/* Bottom Row */}
-              <section className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-8">
-                <div className="bg-white rounded-3xl p-6 shadow-brand border border-slate-100">
+              <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 pb-8">
+                <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-brand border border-slate-100">
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="font-bold">Recent Transactions</h3>
                     <button onClick={() => setActiveTab('Transactions')} className="text-brand-blue text-xs font-bold hover:underline">View All</button>
@@ -375,7 +375,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-3xl p-6 shadow-brand border border-slate-100">
+                <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-brand border border-slate-100">
                   <h3 className="font-bold mb-6">Spending by Category</h3>
                   <div className="flex flex-col gap-5">
                     {['Food', 'Transport', 'Rent', 'Leisure', 'Other'].map(cat => {
@@ -501,7 +501,7 @@ export default function App() {
       )}
 
       {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-2 py-3 flex justify-between items-center z-40">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-2 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex justify-between items-center z-40">
         {[
           { id: 'Dashboard', icon: LayoutDashboard },
           { id: 'Transactions', icon: ReceiptText },
@@ -929,17 +929,17 @@ function AddTransactionModal({ onClose, onAdd, accounts }: { onClose: () => void
   const [toAccountId, setToAccountId] = useState(accounts[1]?.id || accounts[0]?.id || '');
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-3 sm:p-4">
       <motion.div 
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-white w-full max-w-lg rounded-[2rem] overflow-hidden shadow-2xl"
+        className="bg-white w-full max-w-lg rounded-t-[2rem] sm:rounded-[2rem] overflow-hidden shadow-2xl max-h-[92dvh] overflow-y-auto"
       >
-        <div className="p-8 border-b border-slate-100 flex justify-between items-center">
-          <h3 className="text-xl font-bold">New Transaction</h3>
+        <div className="p-5 sm:p-8 border-b border-slate-100 flex justify-between items-center">
+          <h3 className="text-lg sm:text-xl font-bold">New Transaction</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors cursor-pointer">✕</button>
         </div>
-        <div className="p-8 space-y-6">
+        <div className="p-5 sm:p-8 space-y-5 sm:space-y-6">
           <div className="flex bg-slate-100 p-1.5 rounded-2xl">
             {[
               { id: 'expense', label: 'Expense', color: 'text-brand-danger' },

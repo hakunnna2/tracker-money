@@ -16,8 +16,16 @@
 }
 
 @layer base {
+  html {
+    @apply h-full;
+  }
+
   body {
-    @apply bg-brand-bg text-brand-text antialiased font-sans;
+    @apply min-h-dvh bg-brand-bg text-brand-text antialiased font-sans overflow-x-hidden;
+  }
+
+  #root {
+    @apply min-h-dvh;
   }
 }
 
