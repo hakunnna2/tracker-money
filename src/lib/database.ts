@@ -22,6 +22,12 @@ export const database = {
     const accounts = database.getAccounts();
     database.saveAccounts([...accounts, account]);
   },
+  updateAccount: (updated: Account) => {
+    const accounts = database.getAccounts().map((account) =>
+      account.id === updated.id ? updated : account
+    );
+    database.saveAccounts(accounts);
+  },
   deleteAccount: (id: string) => {
     const accounts = database.getAccounts().filter(a => a.id !== id);
     database.saveAccounts(accounts);
