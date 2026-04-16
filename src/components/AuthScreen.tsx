@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Lock, Fingerprint, Eye, EyeOff } from 'lucide-react';
+import { Lock, Fingerprint } from 'lucide-react';
 import {
   setupPIN,
   verifyPIN,
@@ -21,7 +21,6 @@ export default function AuthScreen({ onAuthenticated }: AuthScreenProps) {
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [error, setError] = useState('');
-  const [showPin, setShowPin] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -180,37 +179,26 @@ export default function AuthScreen({ onAuthenticated }: AuthScreenProps) {
           <form onSubmit={handleSetupPIN} className="space-y-4">
             <div>
               <label className="block text-gray-700 text-sm font-semibold mb-2">Enter PIN</label>
-              <div className="relative">
-                <input
-                  type={showPin ? 'text' : 'password'}
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value.slice(0, 6))}
-                  placeholder="••••"
-                  maxLength={6}
-                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-center text-2xl tracking-widest"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPin(!showPin)}
-                  className="absolute right-3 top-2.5 text-gray-500"
-                >
-                  {showPin ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
+              <input
+                type="password"
+                value={pin}
+                onChange={(e) => setPin(e.target.value.slice(0, 6))}
+                placeholder="••••"
+                maxLength={6}
+                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-center text-2xl tracking-widest"
+              />
             </div>
 
             <div>
               <label className="block text-gray-700 text-sm font-semibold mb-2">Confirm PIN</label>
-              <div className="relative">
-                <input
-                  type={showPin ? 'text' : 'password'}
-                  value={confirmPin}
-                  onChange={(e) => setConfirmPin(e.target.value.slice(0, 6))}
-                  placeholder="••••"
-                  maxLength={6}
-                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-center text-2xl tracking-widest"
-                />
-              </div>
+              <input
+                type="password"
+                value={confirmPin}
+                onChange={(e) => setConfirmPin(e.target.value.slice(0, 6))}
+                placeholder="••••"
+                maxLength={6}
+                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-center text-2xl tracking-widest"
+              />
             </div>
 
             {error && (
@@ -253,7 +241,7 @@ export default function AuthScreen({ onAuthenticated }: AuthScreenProps) {
         <form onSubmit={handleLoginPIN} className="space-y-4">
           <div>
             <input
-              type={showPin ? 'text' : 'password'}
+              type="password"
               value={pin}
               onChange={(e) => setPin(e.target.value.slice(0, 6))}
               placeholder="••••"
@@ -261,13 +249,6 @@ export default function AuthScreen({ onAuthenticated }: AuthScreenProps) {
               autoFocus
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-center text-3xl tracking-widest"
             />
-            <button
-              type="button"
-              onClick={() => setShowPin(!showPin)}
-              className="absolute right-3 top-16 text-gray-500"
-            >
-              {showPin ? <EyeOff size={20} /> : <Eye size={20} />}
-            </button>
           </div>
 
           {error && (
