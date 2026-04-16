@@ -1,19 +1,31 @@
 
-import { Transaction, Budget, Goal, Account, AppSettings } from '../types';
+import { Transaction, Budget, Account, AppSettings } from '../types';
 
 const STORAGE_KEYS = {
   TRANSACTIONS: 'copilot_transactions',
   BUDGET: 'copilot_budget',
-  GOALS: 'copilot_goals',
   ACCOUNTS: 'copilot_accounts',
   SETTINGS: 'copilot_settings',
 };
 
+function safeRead<T>(key: string, fallback: T): T {
+  const data = localStorage.getItem(key);
+  if (!data) {
+    return fallback;
+  }
+
+  try {
+    return JSON.parse(data) as T;
+  } catch {
+    localStorage.removeItem(key);
+    return fallback;
+  }
+}
+
 export const database = {
   // Accounts
   getAccounts: (): Account[] => {
-    const data = localStorage.getItem(STORAGE_KEYS.ACCOUNTS);
-    return data ? JSON.parse(data) : [];
+    return safeRead<Account[]>(STORAGE_KEYS.ACCOUNTS, []);
   },
   saveAccounts: (accounts: Account[]) => {
     localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
@@ -35,8 +47,7 @@ export const database = {
 
   // Transactions
   getTransactions: (): Transaction[] => {
-    const data = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-    return data ? JSON.parse(data) : [];
+    return safeRead<Transaction[]>(STORAGE_KEYS.TRANSACTIONS, []);
   },
   saveTransactions: (transactions: Transaction[]) => {
     localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
@@ -56,39 +67,33 @@ export const database = {
 
   // Budget
   getBudget: (): Budget => {
-    const data = localStorage.getItem(STORAGE_KEYS.BUDGET);
-    return data ? JSON.parse(data) : { monthlyLimit: 2000 };
+    return safeRead<Budget>(STORAGE_KEYS.BUDGET, { monthlyLimit: 2000 });
   },
   saveBudget: (budget: Budget) => {
     localStorage.setItem(STORAGE_KEYS.BUDGET, JSON.stringify(budget));
   },
 
-  // Goals
-  getGoals: (): Goal[] => {
-    const data = localStorage.getItem(STORAGE_KEYS.GOALS);
-    return data ? JSON.parse(data) : [];
-  },
-  saveGoals: (goals: Goal[]) => {
-    localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify(goals));
-  },
-  addGoal: (goal: Goal) => {
-    const goals = database.getGoals();
-    database.saveGoals([...goals, goal]);
-  },
-  deleteGoal: (id: string) => {
-    const goals = database.getGoals().filter(g => g.id !== id);
-    database.saveGoals(goals);
-  },
-
   // Settings
   getSettings: (): AppSettings => {
     const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-    return data ? JSON.parse(data) : { currency: 'MAD' };
+    if (!data) {
+      return { currency: 'MAD' };
+    }
+
+    try {
+      const parsed = JSON.parse(data) as Partial<AppSettings>;
+      if (parsed.currency === 'MAD') {
+        return { currency: parsed.currency };
+      }
+      return { currency: 'MAD' };
+    } catch {
+      return { currency: 'MAD' };
+    }
   },
   saveSettings: (settings: AppSettings) => {
     localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
   },
-  updateCurrency: (currency: 'MAD' | 'USD' | 'EUR') => {
+  updateCurrency: (currency: 'MAD') => {
     const settings = database.getSettings();
     database.saveSettings({ ...settings, currency });
   },
@@ -97,5 +102,6 @@ export const database = {
     Object.values(STORAGE_KEYS).forEach((key) => {
       localStorage.removeItem(key);
     });
+    localStorage.removeItem('copilot_goals');
   }
 };

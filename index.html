@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
-    <meta name="description" content="Smart personal finance manager with ML predictions, PIN & biometric authentication" />
+    <meta name="description" content="Smart personal finance manager with MAD budgeting, account tracking, and transaction history" />
     <meta name="theme-color" content="#3b82f6" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -32,7 +32,10 @@
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js?v=20260416-2').then(
-            reg => console.log('Service Worker registered', reg),
+            reg => {
+              console.log('Service Worker registered', reg);
+              reg.update();
+            },
             err => console.log('Service Worker registration failed', err)
           );
         });

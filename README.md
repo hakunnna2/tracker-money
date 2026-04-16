@@ -4,13 +4,11 @@
 
 # 💰 Smart Financial Copilot
 
-A personal finance manager with ML-powered expense predictions, PIN & biometric authentication, and Moroccan Dirham (MAD) currency support.
+A personal finance manager with Moroccan Dirham (MAD) currency support.
 
 **Features:**
-- 🔐 **PIN & Biometric Authentication** - Secure access with fingerprint support
 - 📊 **Dashboard** - Real-time financial overview
 - 💳 **Multi-Account Support** - Manage multiple accounts
-- 📈 **ML-Powered Predictions** - Linear regression forecasting for end-of-month expenses
 - 🎯 **Budget Tracking** - Set and monitor monthly spending limits
 - 💡 **Savings Goals** - Track financial objectives
 - 💱 **Multi-Currency** - Support for MAD, USD, EUR with Moroccan Dirham as default
@@ -41,7 +39,7 @@ A personal finance manager with ML-powered expense predictions, PIN & biometric 
    ```bash
    npm run dev
    ```
-   The app will be available at `http://localhost:3001`
+   The app will be available at `http://localhost:3000`
 
 4. **Build for production:**
    ```bash
@@ -75,12 +73,12 @@ No external API keys required! The app stores all data locally in the browser.
 ```
 src/
 ├── components/
-│   └── AuthScreen.tsx        # PIN & biometric auth UI
+│   ├── AddTransactionModal.tsx
+│   ├── charts/
+│   └── tabs/
 ├── lib/
-│   ├── auth.ts               # Authentication logic
 │   ├── currency.ts           # Currency formatting
-│   ├── database.ts           # LocalStorage wrapper
-│   └── ml.ts                 # Linear regression ML model
+│   └── database.ts           # LocalStorage wrapper
 ├── App.tsx                   # Main app component
 ├── types.ts                  # TypeScript interfaces
 ├── main.tsx                  # Entry point
@@ -93,16 +91,8 @@ public/
 ## Features in Detail
 
 ### 🔐 Security
-- **PIN Hashing**: SHA-256 hashing with no plain-text storage
-- **Biometric Auth**: Uses device's secure enclave
 - **Local Storage**: All data stays on device
 - **No Backend**: Zero server communication
-
-### 📊 ML Predictions
-Uses linear regression to predict:
-- End-of-month spending forecast
-- Projected savings based on current trend
-- Confidence-weighted blend of historical & current patterns
 
 ### 📱 Mobile PWA
 - Install on home screen (Android/iOS)
@@ -129,21 +119,12 @@ Uses linear regression to predict:
 ## Scripts
 
 ```bash
-npm run dev      # Start development server on port 3001
+npm run dev      # Start development server on port 3000
 npm run build    # Build for production (dist/)
 npm run preview  # Preview production build
 npm run clean    # Remove dist folder
 npm run lint     # Type check with TypeScript
 ```
-
-## Authentication Flow
-
-1. **First Time**: User creates 4-digit PIN
-2. **Biometric Setup**: Optionally enable fingerprint auth
-3. **Subsequent Logins**: 
-   - If biometric enabled → Show fingerprint prompt
-   - Fallback to PIN entry
-4. **Settings**: Manage PIN, logout, change currency
 
 ## Data Privacy
 

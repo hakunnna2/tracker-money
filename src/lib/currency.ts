@@ -1,29 +1,16 @@
 import { Currency } from '../types';
 
 const CURRENCY_SYMBOLS: Record<Currency, string> = {
-  MAD: 'د.م.',
-  USD: '$',
-  EUR: '€',
+  MAD: 'MAD',
 };
 
 const CURRENCY_NAMES: Record<Currency, string> = {
   MAD: 'Moroccan Dirham',
-  USD: 'US Dollar',
-  EUR: 'Euro',
 };
 
 export function formatCurrency(amount: number, currency: Currency = 'MAD'): string {
   const symbol = CURRENCY_SYMBOLS[currency];
-  
-  if (currency === 'MAD') {
-    // For MAD, show format like "1,234.50 د.م."
-    return `${amount.toLocaleString('ar-MA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${symbol}`;
-  }
-  
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency,
-  }).format(amount);
+  return `${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${symbol}`;
 }
 
 export function getCurrencySymbol(currency: Currency): string {

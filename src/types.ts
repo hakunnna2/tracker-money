@@ -3,7 +3,7 @@ export type TransactionType = 'income' | 'expense' | 'transfer';
 
 export type Category = 'Food' | 'Transport' | 'Rent' | 'Leisure' | 'Other' | 'Income' | 'Transfer';
 
-export type Currency = 'MAD' | 'USD' | 'EUR';
+export type Currency = 'MAD';
 
 export interface AppSettings {
   currency: Currency;
@@ -12,7 +12,7 @@ export interface AppSettings {
 export interface Account {
   id: string;
   name: string;
-  type: 'Checking' | 'Savings' | 'Credit Card' | 'Cash';
+  type: 'Checking' | 'Credit Card' | 'Cash';
   balance: number; // Initial balance or current calculated balance
 }
 
@@ -29,17 +29,4 @@ export interface Transaction {
 
 export interface Budget {
   monthlyLimit: number;
-}
-
-export interface Goal {
-  id: string;
-  name: string;
-  targetAmount: number;
-  currentAmount: number;
-  deadline?: string;
-}
-
-export interface PredictionResult {
-  endOfMonthForecast: number;
-  projectedSavings: number;
 }
