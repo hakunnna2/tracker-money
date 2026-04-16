@@ -24,7 +24,6 @@ import {
   LayoutDashboard, 
   ReceiptText, 
   Settings, 
-  TrendingUp, 
   Target, 
   AlertTriangle, 
   Plus, 
@@ -39,11 +38,10 @@ import {
 } from 'lucide-react';
 import { Transaction, Budget, Goal, Category, TransactionType, Account, Currency } from './types.ts';
 import { database } from './lib/database.ts';
-import { predictEndOfMonth } from './lib/ml.ts';
 import { formatCurrency } from './lib/currency.ts';
 import { clearAllAuthData } from './lib/auth.ts';
 
-type Tab = 'Dashboard' | 'Transactions' | 'Budget' | 'Predictions' | 'Goals' | 'Accounts' | 'Settings';
+type Tab = 'Dashboard' | 'Transactions' | 'Budget' | 'Goals' | 'Accounts' | 'Settings';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('Dashboard');
@@ -150,8 +148,6 @@ export default function App() {
     return months;
   }, [transactions]);
 
-  const prediction = useMemo(() => predictEndOfMonth(transactions, budget.monthlyLimit), [transactions, budget]);
-
   const budgetSpentPercent = Math.min(100, (stats.currentMonthExpenses / (budget.monthlyLimit || 1)) * 100);
 
   const addTransaction = (t: Omit<Transaction, 'id'>) => {
@@ -182,7 +178,6 @@ export default function App() {
             { id: 'Transactions', icon: ReceiptText },
             { id: 'Accounts', icon: Building2 },
             { id: 'Budget', icon: Settings },
-            { id: 'Predictions', icon: TrendingUp },
             { id: 'Goals', icon: Target },
             { id: 'Settings', icon: Settings },
           ].map((item) => (
@@ -251,21 +246,21 @@ export default function App() {
                 <div className="lg:col-span-2 bg-slate-900 rounded-3xl p-5 sm:p-6 lg:p-8 text-white shadow-xl flex flex-col justify-between overflow-hidden relative min-h-[180px] lg:min-h-[200px]">
                   <div className="absolute -right-20 -top-20 w-64 h-64 bg-brand-blue/10 rounded-full blur-3xl"></div>
                   <div className="flex items-center gap-3 mb-6 relative z-10">
-                    <span className="font-semibold text-sm lg:text-base">Prediction Engine</span>
-                    <span className="bg-white/10 px-2 py-0.5 rounded text-[8px] lg:text-[10px] uppercase tracking-wider font-bold">LR Model v1.0</span>
+                    <span className="font-semibold text-sm lg:text-base">Monthly Cashflow</span>
+                    <span className="bg-white/10 px-2 py-0.5 rounded text-[8px] lg:text-[10px] uppercase tracking-wider font-bold">Live</span>
                   </div>
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 relative z-10">
                     <div>
-                      <p className="text-slate-400 text-xs lg:text-sm">End of Month Forecast</p>
-                      <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold my-1 lg:my-2 ml-0">${prediction.forecast.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
-                      <p className="text-[10px] text-slate-500">Projected total spending</p>
+                      <p className="text-slate-400 text-xs lg:text-sm">Income This Month</p>
+                      <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold my-1 lg:my-2 ml-0 text-brand-success">+{formatCurrency(stats.currentMonthIncome, currency)}</h3>
+                      <p className="text-[10px] text-slate-500">Total monthly inflow</p>
                     </div>
                     <div className="sm:text-right">
-                      <p className="text-slate-400 text-xs lg:text-sm">Projected Savings</p>
-                      <h3 className={`text-xl sm:text-2xl lg:text-3xl font-bold my-1 lg:my-2 ml-0 ${prediction.savings >= 0 ? 'text-brand-success' : 'text-brand-danger'}`}>
-                        {prediction.savings >= 0 ? '+' : ''}${prediction.savings.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      <p className="text-slate-400 text-xs lg:text-sm">Net This Month</p>
+                      <h3 className={`text-xl sm:text-2xl lg:text-3xl font-bold my-1 lg:my-2 ml-0 ${(stats.currentMonthIncome - stats.currentMonthExpenses) >= 0 ? 'text-brand-success' : 'text-brand-danger'}`}>
+                        {formatCurrency(stats.currentMonthIncome - stats.currentMonthExpenses, currency)}
                       </h3>
-                      <p className="text-[10px] text-slate-500">Remaining after forecast</p>
+                      <p className="text-[10px] text-slate-500">Income minus expenses</p>
                     </div>
                   </div>
                 </div>
@@ -273,7 +268,7 @@ export default function App() {
                 <div className="bg-white rounded-3xl p-5 sm:p-6 lg:p-8 shadow-brand border border-slate-100 flex flex-col justify-between">
                   <div>
                     <p className="text-[10px] uppercase font-bold tracking-widest text-brand-muted mb-2">Monthly Budget</p>
-                    <h3 className="text-lg sm:text-xl lg:text-2xl font-bold">${budget.monthlyLimit.toLocaleString()}</h3>
+                    <h3 className="text-lg sm:text-xl lg:text-2xl font-bold">{formatCurrency(budget.monthlyLimit, currency)}</h3>
                   </div>
                   <div className="mt-4 lg:mt-6 flex flex-col gap-2">
                     <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
@@ -285,7 +280,7 @@ export default function App() {
                     </div>
                     <div className="flex justify-between text-[11px] font-bold">
                       <span>{Math.round(budgetSpentPercent)}% Spent</span>
-                      <span className="text-brand-muted">${Math.max(0, budget.monthlyLimit - stats.currentMonthExpenses).toLocaleString()} Left</span>
+                      <span className="text-brand-muted">{formatCurrency(Math.max(0, budget.monthlyLimit - stats.currentMonthExpenses), currency)} Left</span>
                     </div>
                   </div>
                 </div>
@@ -451,10 +446,6 @@ export default function App() {
             />
           )}
 
-          {activeTab === 'Predictions' && (
-            <PredictionsView prediction={prediction} transactions={transactions} />
-          )}
-
           {activeTab === 'Goals' && (
             <GoalsView 
               goals={goals} 
@@ -508,7 +499,6 @@ export default function App() {
             { id: 'Transactions', icon: ReceiptText },
             { id: 'Accounts', icon: Building2 },
             { id: 'Budget', icon: Settings },
-            { id: 'Predictions', icon: TrendingUp },
             { id: 'Goals', icon: Target },
             { id: 'Settings', icon: Settings },
           ].map((item) => (
@@ -803,7 +793,7 @@ function BudgetView({ budget, onSave }: { budget: Budget, onSave: (b: Budget) =>
           </div>
         </div>
         <p className="text-xs text-brand-muted leading-relaxed">
-          Set a realistic monthly limit to keep track of your spending. We'll alert you if you get close to this amount based on your transactions and predictions.
+          Set a realistic monthly limit to keep track of your spending and compare it with your real monthly transactions.
         </p>
         <button 
           onClick={() => onSave({ monthlyLimit: val })}
@@ -811,50 +801,6 @@ function BudgetView({ budget, onSave }: { budget: Budget, onSave: (b: Budget) =>
         >
           Save Budget
         </button>
-      </div>
-    </motion.div>
-  );
-}
-
-function PredictionsView({ prediction, transactions }: { prediction: any, transactions: Transaction[] }) {
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col gap-8"
-    >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-slate-900 rounded-3xl p-8 text-white">
-          <h2 className="text-xl font-bold mb-8">AI Forecast</h2>
-          <div className="space-y-8">
-            <div>
-              <p className="text-slate-400 text-sm">Projected End of Month Expense</p>
-              <h3 className="text-4xl font-bold">${prediction.forecast.toLocaleString(undefined, { minimumFractionDigits: 2 })}</h3>
-            </div>
-            <div>
-              <p className="text-slate-400 text-sm">Projected Balance (Month End)</p>
-              <h3 className={`text-4xl font-bold ${prediction.savings >= 0 ? 'text-brand-success' : 'text-brand-danger'}`}>
-                {prediction.savings >= 0 ? '+' : ''}${prediction.savings.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-              </h3>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-3xl p-8 shadow-brand border border-slate-100">
-          <h2 className="text-xl font-bold mb-6">Model Insights</h2>
-          <p className="text-sm text-brand-muted leading-relaxed mb-6">
-            Our Linear Regression model analyzes your daily cumulative spending patterns to estimate where you'll end up by the end of the month.
-          </p>
-          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 space-y-4">
-            <div className="flex items-center gap-3 text-sm font-semibold">
-              <TrendingUp size={18} className="text-brand-blue" />
-              <span>Trend: {prediction.savings < 0 ? 'High spending velocity' : 'Stable spending'}</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm font-semibold">
-              <AlertTriangle size={18} className="text-brand-warning" />
-              <span>Reliability: {transactions.length > 5 ? 'Medium-High' : 'Low (Needs more data)'}</span>
-            </div>
-          </div>
-        </div>
       </div>
     </motion.div>
   );
