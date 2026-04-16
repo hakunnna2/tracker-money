@@ -1109,6 +1109,10 @@ function SettingsView({ currency, onCurrencyChange, onClearData }: { currency: C
             <p className="text-xs font-bold text-brand-muted uppercase tracking-widest mb-1">Current User</p>
             <p className="text-lg font-semibold">Hakunna</p>
           </div>
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+            <p className="text-xs font-bold text-brand-muted uppercase tracking-widest mb-1">App Version</p>
+            <p className="text-sm font-semibold text-brand-text">v20260416-2</p>
+          </div>
           <button 
             onClick={onClearData}
             className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl font-bold transition-colors"

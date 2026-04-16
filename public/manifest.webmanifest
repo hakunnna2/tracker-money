@@ -2,7 +2,7 @@
   "name": "Smart Financial Copilot",
   "short_name": "FinancialCopilot",
   "description": "Smart personal finance manager with ML predictions, PIN & biometric authentication.",
-  "start_url": "/",
+  "start_url": "/?v=20260416-2",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
