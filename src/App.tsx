@@ -70,51 +70,19 @@ export default function App() {
 
     // Transactions
     const existingTx = database.getTransactions();
-    if (existingTx.length === 0) {
-      const now = new Date();
-      const dummyTx: Transaction[] = [];
-      
-      // Generate some historical data for the last 6 months
-      for (let i = 0; i < 6; i++) {
-        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 15);
-        const iso = monthDate.toISOString();
-        
-        // Income
-        dummyTx.push({ id: `inc-${i}`, amount: 4500 + Math.random() * 1000, type: 'income', category: 'Income', date: iso, description: 'Monthly Salary', accountId: 'acc-1' });
-        
-        // Expenses
-        const rentAmount = 1200;
-        const foodAmount = 400 + Math.random() * 200;
-        const tranAmount = 100 + Math.random() * 100;
-        const leisureAmount = 200 + Math.random() * 300;
-
-        dummyTx.push({ id: `exp-rent-${i}`, amount: rentAmount, type: 'expense', category: 'Rent', date: iso, description: 'Apartment Rent', accountId: 'acc-1' });
-        dummyTx.push({ id: `exp-food-${i}`, amount: foodAmount, type: 'expense', category: 'Food', date: iso, description: 'Groceries', accountId: 'acc-1' });
-        dummyTx.push({ id: `exp-tran-${i}`, amount: tranAmount, type: 'expense', category: 'Transport', date: iso, description: 'Fuel/Commute', accountId: 'acc-1' });
-        dummyTx.push({ id: `exp-lei-${i}`, amount: leisureAmount, type: 'expense', category: 'Leisure', date: iso, description: 'Entertainment', accountId: 'acc-1' });
-      }
-
-      database.saveTransactions(dummyTx);
-      setTransactions(dummyTx);
-    } else {
-      setTransactions(existingTx);
-    }
+    setTransactions(existingTx);
     
     setBudget(database.getBudget());
     const settings = database.getSettings();
-    setCurrency(settings.currency);
+    if (!settings.currency) {
+      database.saveSettings({ currency: 'MAD' });
+      setCurrency('MAD');
+    } else {
+      setCurrency(settings.currency);
+    }
     
     const existingGoals = database.getGoals();
-    if (existingGoals.length === 0) {
-      const dummyGoals = [
-        { id: 'g1', name: 'New Laptop', targetAmount: 2500, currentAmount: 850 },
-        { id: 'g2', name: 'Summer Trip', targetAmount: 5000, currentAmount: 1200 },
-      ];
-      database.saveGoals(dummyGoals);
-      setGoals(dummyGoals);
-    } else {
-      setGoals(existingGoals);
-    }
+    setGoals(existingGoals);
   }, []);
 
 
@@ -475,7 +443,7 @@ export default function App() {
                 database.updateCurrency(curr);
               }}
               onClearData={() => {
-                const confirmed = window.confirm('This will delete all transactions, goals, accounts, budget settings, and your PIN. Start fresh?');
+                const confirmed = window.confirm('This will delete all transactions, goals, accounts, and settings. Start fresh?');
                 if (!confirmed) {
                   return;
                 }
@@ -1220,21 +1188,8 @@ function SettingsView({ currency, onCurrencyChange, onClearData }: { currency: C
             <Trash2 size={18} />
             Clear data and start fresh
           </button>
-          <p className="text-xs text-brand-muted text-center">You will be prompted to enter your PIN on next login</p>
+          <p className="text-xs text-brand-muted text-center">This action resets the app to a clean state.</p>
         </div>
-      </div>
-
-      <div className="lg:col-span-2 bg-blue-50 rounded-3xl p-8 border border-blue-100">
-        <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-          <AlertTriangle size={20} className="text-blue-600" />
-          Security Information
-        </h3>
-        <ul className="space-y-3 text-sm text-slate-700">
-          <li>✓ Your PIN is hashed and never stored in plain text</li>
-          <li>✓ Biometric authentication uses your device's secure enclave</li>
-          <li>✓ All data is stored locally on your device</li>
-          <li>✓ No personal data is sent to external servers</li>
-        </ul>
       </div>
     </motion.div>
   );
