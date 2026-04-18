@@ -50,6 +50,7 @@ export default function DashboardView({
   onViewAllTransactions,
 }: DashboardViewProps) {
   const [shouldLoadChart, setShouldLoadChart] = useState(false);
+  const [selectedDayOffset, setSelectedDayOffset] = useState(0);
 
   const walletAccount = useMemo(
     () => accounts.find((account) => account.name.trim().toLowerCase() === 'wallet') || accounts[0],
@@ -166,16 +167,19 @@ export default function DashboardView({
   const budgetSpentPercent = Math.min(100, (stats.currentMonthExpenses / (budget.monthlyLimit || 1)) * 100);
   const dailyStats = useMemo(() => {
     const now = new Date();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const selectedDate = new Date(now);
+    selectedDate.setDate(now.getDate() - selectedDayOffset);
+
+    const daysInMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
     const todaySpent = transactions
       .filter((t) => {
         if (t.type !== 'expense') return false;
         const d = parseLocalDate(t.date);
         return (
           t.accountId === walletAccount?.id &&
-          d.getDate() === now.getDate() &&
-          d.getMonth() === now.getMonth() &&
-          d.getFullYear() === now.getFullYear()
+          d.getDate() === selectedDate.getDate() &&
+          d.getMonth() === selectedDate.getMonth() &&
+          d.getFullYear() === selectedDate.getFullYear()
         );
       })
       .reduce((sum, t) => sum + t.amount, 0);
@@ -184,8 +188,8 @@ export default function DashboardView({
     const progressRaw = (todaySpent / (dailyTarget || 1)) * 100;
     const progress = Math.min(100, progressRaw);
 
-    return { todaySpent, dailyTarget, progress, progressRaw };
-  }, [transactions, budget.monthlyLimit, walletAccount]);
+    return { todaySpent, dailyTarget, progress, progressRaw, selectedDate };
+  }, [transactions, budget.monthlyLimit, walletAccount, selectedDayOffset]);
 
   const circleRadius = 48;
   const circleCircumference = 2 * Math.PI * circleRadius;
@@ -229,13 +233,53 @@ export default function DashboardView({
         </div>
 
         <div className="bg-white rounded-3xl p-5 sm:p-6 lg:p-8 shadow-brand border border-slate-100 flex items-center justify-between gap-5">
-          <div>
-            <p className="text-[10px] uppercase font-bold tracking-widest text-brand-muted mb-2">Daily Spending</p>
-            <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-brand-danger">
-              {formatCurrency(dailyStats.todaySpent, currency)}
-            </h3>
-            <p className="text-xs text-brand-muted mt-2">
-              Target: {formatCurrency(dailyStats.dailyTarget, currency)}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <p className="text-[10px] uppercase font-bold tracking-widest text-brand-muted mb-2">Daily Spending</p>
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-brand-danger">
+                  {formatCurrency(dailyStats.todaySpent, currency)}
+                </h3>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => setSelectedDayOffset((current) => Math.min(current + 1, 30))}
+                  disabled={selectedDayOffset >= 30}
+                  className="px-3 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={() => setSelectedDayOffset((current) => Math.max(current - 1, 0))}
+                  disabled={selectedDayOffset <= 0}
+                  className="px-3 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-3">
+              {[0, 1, 2, 3, 4, 5, 6].map((offset) => (
+                <button
+                  key={offset}
+                  onClick={() => setSelectedDayOffset(offset)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                    selectedDayOffset === offset ? 'bg-brand-blue text-white' : 'bg-slate-100 text-slate-600'
+                  }`}
+                >
+                  {offset === 0 ? 'Today' : `${offset}d ago`}
+                </button>
+              ))}
+            </div>
+
+            <p className="text-xs text-brand-muted">
+              {dailyStats.selectedDate.toLocaleDateString(undefined, {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+              })}
             </p>
           </div>
 
