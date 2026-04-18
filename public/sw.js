@@ -1,5 +1,11 @@
-const CACHE_NAME = 'financial-copilot-v6';
+const CACHE_NAME = 'financial-copilot-v7';
 const ASSETS_TO_CACHE = ['/'];
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

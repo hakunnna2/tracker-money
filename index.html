@@ -20,7 +20,7 @@
     <link rel="icon" type="image/png" href="/icons/icon-192-v2.png" />
     
     <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.webmanifest?v=20260418-1" />
+    <link rel="manifest" href="/manifest.webmanifest?v=20260418-2" />
     
     <!-- Title -->
     <title>Smart Financial Copilot</title>
@@ -31,10 +31,32 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js?v=20260418-1').then(
+          navigator.serviceWorker.register('/sw.js?v=20260418-2').then(
             reg => {
               console.log('Service Worker registered', reg);
               reg.update();
+
+              if (reg.waiting) {
+                reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+              }
+
+              reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing;
+                if (!newWorker) return;
+
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                  }
+                });
+              });
+
+              let reloading = false;
+              navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (reloading) return;
+                reloading = true;
+                window.location.reload();
+              });
             },
             err => console.log('Service Worker registration failed', err)
           );
