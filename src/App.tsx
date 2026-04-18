@@ -73,14 +73,20 @@ export default function App() {
   }, [toastMessage]);
 
   const currentMonthExpenses = useMemo(() => {
+    const walletAccount = accounts.find((account) => account.name.trim().toLowerCase() === 'wallet') || accounts[0];
     const now = new Date();
     return transactions
       .filter((t) => {
         const d = parseLocalDate(t.date);
-        return t.type === 'expense' && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        return (
+          t.type === 'expense' &&
+          t.accountId === walletAccount?.id &&
+          d.getMonth() === now.getMonth() &&
+          d.getFullYear() === now.getFullYear()
+        );
       })
       .reduce((acc, t) => acc + t.amount, 0);
-  }, [transactions]);
+  }, [transactions, accounts]);
 
   const budgetSpentPercent = Math.min(100, (currentMonthExpenses / (budget.monthlyLimit || 1)) * 100);
 

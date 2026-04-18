@@ -51,14 +51,17 @@ export default function DashboardView({
 }: DashboardViewProps) {
   const [shouldLoadChart, setShouldLoadChart] = useState(false);
 
+  const walletAccount = useMemo(
+    () => accounts.find((account) => account.name.trim().toLowerCase() === 'wallet') || accounts[0],
+    [accounts],
+  );
+
   useEffect(() => {
     const id = window.setTimeout(() => setShouldLoadChart(true), 0);
     return () => window.clearTimeout(id);
   }, []);
 
   const stats = useMemo(() => {
-    const walletAccount =
-      accounts.find((account) => account.name.trim().toLowerCase() === 'wallet') || accounts[0];
     const totalBalance = walletAccount
       ? transactions.reduce((sum, tx) => {
           if (tx.accountId === walletAccount.id) {
@@ -76,19 +79,29 @@ export default function DashboardView({
     const currentMonthExpenses = transactions
       .filter((t) => {
         const d = parseLocalDate(t.date);
-        return t.type === 'expense' && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        return (
+          t.type === 'expense' &&
+          t.accountId === walletAccount?.id &&
+          d.getMonth() === now.getMonth() &&
+          d.getFullYear() === now.getFullYear()
+        );
       })
       .reduce((acc, t) => acc + t.amount, 0);
 
     const currentMonthIncome = transactions
       .filter((t) => {
         const d = parseLocalDate(t.date);
-        return t.type === 'income' && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        return (
+          t.type === 'income' &&
+          t.accountId === walletAccount?.id &&
+          d.getMonth() === now.getMonth() &&
+          d.getFullYear() === now.getFullYear()
+        );
       })
       .reduce((acc, t) => acc + t.amount, 0);
 
     return { totalBalance, currentMonthExpenses, currentMonthIncome };
-  }, [transactions, accounts]);
+  }, [transactions, walletAccount]);
 
   const recentTransactions = useMemo(() => {
     const withIndex = transactions.map((tx, index) => ({ tx, index }));
@@ -111,6 +124,7 @@ export default function DashboardView({
         .filter(
           (t) =>
             t.type === 'expense' &&
+            t.accountId === walletAccount?.id &&
             parseLocalDate(t.date).getMonth() === d.getMonth() &&
             parseLocalDate(t.date).getFullYear() === d.getFullYear(),
         )
@@ -120,25 +134,62 @@ export default function DashboardView({
     }
 
     return months;
-  }, [transactions]);
+  }, [transactions, walletAccount]);
 
   const categoryTotals = useMemo(() => {
+    const now = new Date();
     const totals: Record<string, number> = {};
 
     for (const t of transactions) {
-      if (t.type === 'expense') {
+      const d = parseLocalDate(t.date);
+      const isCurrentMonth = d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+
+      if (t.type === 'expense' && t.accountId === walletAccount?.id && isCurrentMonth) {
         totals[t.category] = (totals[t.category] || 0) + t.amount;
       }
     }
 
-    const categoryEntries = Object.entries(totals)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
+    const sortedEntries = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+    let categoryEntries = sortedEntries;
+
+    // Keep chart readable while preserving total spent by grouping smaller categories.
+    if (sortedEntries.length > 5) {
+      const primary = sortedEntries.slice(0, 4);
+      const remainingTotal = sortedEntries.slice(4).reduce((sum, [, amount]) => sum + amount, 0);
+      categoryEntries = [...primary, ['Other Categories', remainingTotal]];
+    }
+
     const maxAmount = Math.max(...categoryEntries.map(([, amount]) => amount), 1);
     return { categoryEntries, maxAmount };
-  }, [transactions]);
+  }, [transactions, walletAccount]);
 
   const budgetSpentPercent = Math.min(100, (stats.currentMonthExpenses / (budget.monthlyLimit || 1)) * 100);
+  const dailyStats = useMemo(() => {
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const todaySpent = transactions
+      .filter((t) => {
+        if (t.type !== 'expense') return false;
+        const d = parseLocalDate(t.date);
+        return (
+          t.accountId === walletAccount?.id &&
+          d.getDate() === now.getDate() &&
+          d.getMonth() === now.getMonth() &&
+          d.getFullYear() === now.getFullYear()
+        );
+      })
+      .reduce((sum, t) => sum + t.amount, 0);
+
+    const dailyTarget = budget.monthlyLimit / Math.max(daysInMonth, 1);
+    const progressRaw = (todaySpent / (dailyTarget || 1)) * 100;
+    const progress = Math.min(100, progressRaw);
+
+    return { todaySpent, dailyTarget, progress, progressRaw };
+  }, [transactions, budget.monthlyLimit, walletAccount]);
+
+  const circleRadius = 48;
+  const circleCircumference = 2 * Math.PI * circleRadius;
+  const circleOffset = circleCircumference - (dailyStats.progress / 100) * circleCircumference;
 
   return (
     <motion.div
@@ -154,7 +205,7 @@ export default function DashboardView({
         <StatCard label="Monthly Expenses" value={stats.currentMonthExpenses} type="expense" currency={currency} />
       </section>
 
-      <section className="grid grid-cols-1 gap-3 sm:gap-4 lg:gap-6">
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
         <div className="bg-white rounded-3xl p-5 sm:p-6 lg:p-8 shadow-brand border border-slate-100 flex flex-col justify-between">
           <div>
             <p className="text-[10px] uppercase font-bold tracking-widest text-brand-muted mb-2">Monthly Budget</p>
@@ -173,6 +224,39 @@ export default function DashboardView({
               <span className="text-brand-muted">
                 {formatCurrency(Math.max(0, budget.monthlyLimit - stats.currentMonthExpenses), currency)} Left
               </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-3xl p-5 sm:p-6 lg:p-8 shadow-brand border border-slate-100 flex items-center justify-between gap-5">
+          <div>
+            <p className="text-[10px] uppercase font-bold tracking-widest text-brand-muted mb-2">Daily Spending</p>
+            <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-brand-danger">
+              {formatCurrency(dailyStats.todaySpent, currency)}
+            </h3>
+            <p className="text-xs text-brand-muted mt-2">
+              Target: {formatCurrency(dailyStats.dailyTarget, currency)}
+            </p>
+          </div>
+
+          <div className="relative w-28 h-28 shrink-0">
+            <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
+              <circle cx="60" cy="60" r={circleRadius} stroke="#e2e8f0" strokeWidth="10" fill="none" />
+              <circle
+                cx="60"
+                cy="60"
+                r={circleRadius}
+                stroke={dailyStats.progressRaw > 100 ? '#ef4444' : '#3b82f6'}
+                strokeWidth="10"
+                fill="none"
+                strokeLinecap="round"
+                strokeDasharray={circleCircumference}
+                strokeDashoffset={circleOffset}
+                className="transition-all duration-500"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center text-sm font-bold text-slate-700">
+              {Math.round(dailyStats.progressRaw)}%
             </div>
           </div>
         </div>
@@ -254,7 +338,7 @@ export default function DashboardView({
         </div>
 
         <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-brand border border-slate-100">
-          <h3 className="font-bold mb-6">Spending by Category</h3>
+          <h3 className="font-bold mb-6">Spending by Category (This Month)</h3>
           <div className="flex flex-col gap-5">
             {categoryTotals.categoryEntries.length === 0 && (
               <p className="text-sm text-brand-muted">No expense categories yet.</p>

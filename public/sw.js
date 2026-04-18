@@ -1,4 +1,4 @@
-const CACHE_NAME = 'financial-copilot-v7';
+const CACHE_NAME = 'financial-copilot-v8';
 const ASSETS_TO_CACHE = ['/'];
 
 self.addEventListener('message', (event) => {
