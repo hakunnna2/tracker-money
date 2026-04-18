@@ -187,8 +187,9 @@ export default function DashboardView({
     const dailyTarget = budget.monthlyLimit / Math.max(daysInMonth, 1);
     const progressRaw = (todaySpent / (dailyTarget || 1)) * 100;
     const progress = Math.min(100, progressRaw);
+    const budgetLeft = dailyTarget - todaySpent;
 
-    return { todaySpent, dailyTarget, progress, progressRaw, selectedDate };
+    return { todaySpent, dailyTarget, budgetLeft, progress, progressRaw, selectedDate };
   }, [transactions, budget.monthlyLimit, walletAccount, selectedDayOffset]);
 
   const circleRadius = 48;
@@ -240,6 +241,9 @@ export default function DashboardView({
                 <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-brand-danger">
                   {formatCurrency(dailyStats.todaySpent, currency)}
                 </h3>
+                <p className="text-xs text-brand-muted mt-2">
+                  Budget left: {formatCurrency(Math.max(0, dailyStats.budgetLeft), currency)}
+                </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button
@@ -257,20 +261,6 @@ export default function DashboardView({
                   Next
                 </button>
               </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2 mb-3">
-              {[0, 1, 2, 3, 4, 5, 6].map((offset) => (
-                <button
-                  key={offset}
-                  onClick={() => setSelectedDayOffset(offset)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
-                    selectedDayOffset === offset ? 'bg-brand-blue text-white' : 'bg-slate-100 text-slate-600'
-                  }`}
-                >
-                  {offset === 0 ? 'Today' : `${offset}d ago`}
-                </button>
-              ))}
             </div>
 
             <p className="text-xs text-brand-muted">
@@ -299,8 +289,9 @@ export default function DashboardView({
                 className="transition-all duration-500"
               />
             </svg>
-            <div className="absolute inset-0 flex items-center justify-center text-sm font-bold text-slate-700">
-              {Math.round(dailyStats.progressRaw)}%
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-muted">Spent</span>
+              <span className="text-sm font-bold text-slate-700">{formatCurrency(dailyStats.todaySpent, currency)}</span>
             </div>
           </div>
         </div>

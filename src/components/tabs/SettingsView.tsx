@@ -32,7 +32,7 @@ export default function SettingsView({ onClearData }: SettingsViewProps) {
           </div>
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
             <p className="text-xs font-bold text-brand-muted uppercase tracking-widest mb-1">App Version</p>
-            <p className="text-sm font-semibold text-brand-text">v20260418-3</p>
+            <p className="text-sm font-semibold text-brand-text">v20260418-4</p>
           </div>
           <button
             onClick={onClearData}
