@@ -191,10 +191,6 @@ export default function DashboardView({
     return { todaySpent, selectedDate, whereEntries };
   }, [transactions, budget.monthlyLimit, walletAccount, selectedDayOffset]);
 
-  const circleRadius = 48;
-  const circleCircumference = 2 * Math.PI * circleRadius;
-  const circleOffset = dailyStats.todaySpent > 0 ? 0 : circleCircumference;
-
   return (
     <motion.div
       key="dashboard"
@@ -232,7 +228,7 @@ export default function DashboardView({
           </div>
         </div>
 
-        <div className="bg-white rounded-3xl p-5 sm:p-6 lg:p-8 shadow-brand border border-slate-100 flex items-center justify-between gap-5">
+        <div className="bg-white rounded-3xl p-5 sm:p-6 lg:p-8 shadow-brand border border-slate-100">
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-3 mb-3">
               <div>
@@ -276,28 +272,6 @@ export default function DashboardView({
                   {cat}: {formatCurrency(amount, currency)}
                 </p>
               ))}
-            </div>
-          </div>
-
-          <div className="relative w-28 h-28 shrink-0">
-            <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
-              <circle cx="60" cy="60" r={circleRadius} stroke="#e2e8f0" strokeWidth="10" fill="none" />
-              <circle
-                cx="60"
-                cy="60"
-                r={circleRadius}
-                stroke={dailyStats.todaySpent > 0 ? '#3b82f6' : '#cbd5e1'}
-                strokeWidth="10"
-                fill="none"
-                strokeLinecap="round"
-                strokeDasharray={circleCircumference}
-                strokeDashoffset={circleOffset}
-                className="transition-all duration-500"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-brand-muted">Spent</span>
-              <span className="text-sm font-bold text-slate-700">{formatCurrency(dailyStats.todaySpent, currency)}</span>
             </div>
           </div>
         </div>
