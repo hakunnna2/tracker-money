@@ -274,6 +274,7 @@ export default function App() {
             onAdd={addTransaction}
             onUpdate={updateTransaction}
             editingTransaction={editingTransaction}
+            transactions={transactions}
             accounts={accounts}
             currency={currency}
           />

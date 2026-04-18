@@ -15,6 +15,46 @@ interface DashboardViewProps {
   onViewAllTransactions: () => void;
 }
 
+type AnalyticsRange = 'today' | 'thisMonth' | 'lastMonth' | 'custom';
+
+function toDateInputValue(date: Date): string {
+  return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+}
+
+function getRangeBounds(range: AnalyticsRange, customStart: string, customEnd: string): { start: Date; end: Date; label: string } {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+  if (range === 'today') {
+    return { start: todayStart, end: todayEnd, label: 'Today' };
+  }
+
+  if (range === 'thisMonth') {
+    return {
+      start: new Date(now.getFullYear(), now.getMonth(), 1),
+      end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999),
+      label: 'This Month',
+    };
+  }
+
+  if (range === 'lastMonth') {
+    return {
+      start: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+      end: new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999),
+      label: 'Last Month',
+    };
+  }
+
+  const startSource = customStart ? parseLocalDate(customStart) : todayStart;
+  const endSource = customEnd ? parseLocalDate(customEnd) : todayEnd;
+  const start = new Date(Math.min(startSource.getTime(), endSource.getTime()));
+  const end = new Date(Math.max(startSource.getTime(), endSource.getTime()));
+  end.setHours(23, 59, 59, 999);
+
+  return { start, end, label: 'Custom Range' };
+}
+
 function StatCard({
   label,
   value,
@@ -51,6 +91,12 @@ export default function DashboardView({
 }: DashboardViewProps) {
   const [shouldLoadChart, setShouldLoadChart] = useState(false);
   const [selectedDayOffset, setSelectedDayOffset] = useState(0);
+  const [analyticsRange, setAnalyticsRange] = useState<AnalyticsRange>('thisMonth');
+  const [customStartDate, setCustomStartDate] = useState(() => {
+    const now = new Date();
+    return toDateInputValue(new Date(now.getFullYear(), now.getMonth(), 1));
+  });
+  const [customEndDate, setCustomEndDate] = useState(() => toDateInputValue(new Date()));
 
   const walletAccount = useMemo(
     () => accounts.find((account) => account.name.trim().toLowerCase() === 'wallet') || accounts[0],
@@ -61,6 +107,23 @@ export default function DashboardView({
     const id = window.setTimeout(() => setShouldLoadChart(true), 0);
     return () => window.clearTimeout(id);
   }, []);
+
+  const analyticsBounds = useMemo(
+    () => getRangeBounds(analyticsRange, customStartDate, customEndDate),
+    [analyticsRange, customStartDate, customEndDate],
+  );
+
+  const walletTransactions = useMemo(
+    () => transactions.filter((t) => t.accountId === walletAccount?.id || t.toAccountId === walletAccount?.id),
+    [transactions, walletAccount],
+  );
+
+  const walletTransactionsInRange = useMemo(() => {
+    return walletTransactions.filter((t) => {
+      const d = parseLocalDate(t.date);
+      return d.getTime() >= analyticsBounds.start.getTime() && d.getTime() <= analyticsBounds.end.getTime();
+    });
+  }, [walletTransactions, analyticsBounds]);
 
   const stats = useMemo(() => {
     const totalBalance = walletAccount
@@ -76,76 +139,62 @@ export default function DashboardView({
         }, walletAccount.balance)
       : 0;
 
-    const now = new Date();
-    const currentMonthExpenses = transactions
+    const currentRangeExpenses = walletTransactionsInRange
       .filter((t) => {
-        const d = parseLocalDate(t.date);
-        return (
-          t.type === 'expense' &&
-          t.accountId === walletAccount?.id &&
-          d.getMonth() === now.getMonth() &&
-          d.getFullYear() === now.getFullYear()
-        );
+        return t.type === 'expense' && t.accountId === walletAccount?.id;
       })
       .reduce((acc, t) => acc + t.amount, 0);
 
-    const currentMonthIncome = transactions
+    const currentRangeIncome = walletTransactionsInRange
       .filter((t) => {
-        const d = parseLocalDate(t.date);
-        return (
-          t.type === 'income' &&
-          t.accountId === walletAccount?.id &&
-          d.getMonth() === now.getMonth() &&
-          d.getFullYear() === now.getFullYear()
-        );
+        return t.type === 'income' && t.accountId === walletAccount?.id;
       })
       .reduce((acc, t) => acc + t.amount, 0);
 
-    return { totalBalance, currentMonthExpenses, currentMonthIncome };
-  }, [transactions, walletAccount]);
+    return { totalBalance, currentRangeExpenses, currentRangeIncome };
+  }, [transactions, walletAccount, walletTransactionsInRange]);
 
   const recentTransactions = useMemo(() => {
-    const withIndex = transactions.map((tx, index) => ({ tx, index }));
+    const withIndex = walletTransactionsInRange.map((tx, index) => ({ tx, index }));
     withIndex.sort((a, b) => {
       const dateDiff = parseLocalDate(b.tx.date).getTime() - parseLocalDate(a.tx.date).getTime();
       if (dateDiff !== 0) return dateDiff;
       return b.index - a.index;
     });
     return withIndex.map((item) => item.tx).slice(0, 5);
-  }, [transactions]);
+  }, [walletTransactionsInRange]);
 
   const trendData = useMemo(() => {
-    const months = [];
-    const now = new Date();
+    const start = analyticsBounds.start;
+    const end = analyticsBounds.end;
+    const daySpan = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+    const shouldGroupByDay = daySpan <= 45;
 
-    for (let i = 5; i >= 0; i -= 1) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const label = d.toLocaleString('default', { month: 'short' });
-      const expenses = transactions
-        .filter(
-          (t) =>
-            t.type === 'expense' &&
-            t.accountId === walletAccount?.id &&
-            parseLocalDate(t.date).getMonth() === d.getMonth() &&
-            parseLocalDate(t.date).getFullYear() === d.getFullYear(),
-        )
-        .reduce((sum, t) => sum + t.amount, 0);
+    const groups: Record<string, number> = {};
 
-      months.push({ name: label, amount: expenses });
+    for (const t of walletTransactionsInRange) {
+      if (t.type !== 'expense' || t.accountId !== walletAccount?.id) continue;
+      const d = parseLocalDate(t.date);
+      const key = shouldGroupByDay
+        ? [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0')].join('-')
+        : [d.getFullYear(), String(d.getMonth() + 1).padStart(2, '0')].join('-');
+      groups[key] = (groups[key] || 0) + t.amount;
     }
 
-    return months;
-  }, [transactions, walletAccount]);
+    const labels = Object.keys(groups).sort((a, b) => a.localeCompare(b));
+    return labels.map((label) => ({
+      name: shouldGroupByDay
+        ? parseLocalDate(label).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+        : new Date(`${label}-01`).toLocaleDateString(undefined, { month: 'short', year: '2-digit' }),
+      amount: groups[label],
+    }));
+  }, [walletTransactionsInRange, walletAccount, analyticsBounds]);
 
   const categoryTotals = useMemo(() => {
-    const now = new Date();
     const totals: Record<string, number> = {};
 
-    for (const t of transactions) {
-      const d = parseLocalDate(t.date);
-      const isCurrentMonth = d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-
-      if (t.type === 'expense' && t.accountId === walletAccount?.id && isCurrentMonth) {
+    for (const t of walletTransactionsInRange) {
+      if (t.type === 'expense' && t.accountId === walletAccount?.id) {
         totals[t.category] = (totals[t.category] || 0) + t.amount;
       }
     }
@@ -162,9 +211,9 @@ export default function DashboardView({
 
     const maxAmount = Math.max(...categoryEntries.map(([, amount]) => amount), 1);
     return { categoryEntries, maxAmount };
-  }, [transactions, walletAccount]);
+  }, [walletTransactionsInRange, walletAccount]);
 
-  const budgetSpentPercent = Math.min(100, (stats.currentMonthExpenses / (budget.monthlyLimit || 1)) * 100);
+  const budgetSpentPercent = Math.min(100, (stats.currentRangeExpenses / (budget.monthlyLimit || 1)) * 100);
   const dailyStats = useMemo(() => {
     const now = new Date();
     const selectedDate = new Date(now);
@@ -189,7 +238,7 @@ export default function DashboardView({
     const whereEntries = Object.entries(categoryMap).sort((a, b) => b[1] - a[1]).slice(0, 3);
 
     return { todaySpent, selectedDate, whereEntries };
-  }, [transactions, budget.monthlyLimit, walletAccount, selectedDayOffset]);
+  }, [transactions, walletAccount, selectedDayOffset]);
 
   return (
     <motion.div
@@ -201,8 +250,46 @@ export default function DashboardView({
     >
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
         <StatCard label="Total Balance" value={stats.totalBalance} currency={currency} />
-        <StatCard label="Monthly Income" value={stats.currentMonthIncome} type="income" currency={currency} />
-        <StatCard label="Monthly Expenses" value={stats.currentMonthExpenses} type="expense" currency={currency} />
+        <StatCard label={`${analyticsBounds.label} Income`} value={stats.currentRangeIncome} type="income" currency={currency} />
+        <StatCard label={`${analyticsBounds.label} Expenses`} value={stats.currentRangeExpenses} type="expense" currency={currency} />
+      </section>
+
+      <section className="bg-white rounded-3xl p-4 sm:p-5 shadow-brand border border-slate-100 flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            { id: 'today', label: 'Today' },
+            { id: 'thisMonth', label: 'This Month' },
+            { id: 'lastMonth', label: 'Last Month' },
+            { id: 'custom', label: 'Custom' },
+          ].map((option) => (
+            <button
+              key={option.id}
+              onClick={() => setAnalyticsRange(option.id as AnalyticsRange)}
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                analyticsRange === option.id ? 'bg-brand-blue text-white' : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        {analyticsRange === 'custom' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input
+              type="date"
+              value={customStartDate}
+              onChange={(e) => setCustomStartDate(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+            />
+            <input
+              type="date"
+              value={customEndDate}
+              onChange={(e) => setCustomEndDate(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-blue/20"
+            />
+          </div>
+        )}
       </section>
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
@@ -281,7 +368,7 @@ export default function DashboardView({
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 lg:mb-8">
           <div>
             <h3 className="font-bold text-lg">Spending Trend</h3>
-            <p className="text-xs text-brand-muted">Monthly expenses (last 6 months)</p>
+            <p className="text-xs text-brand-muted">Expenses for {analyticsBounds.label.toLowerCase()}</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 bg-brand-blue rounded-full"></div>
@@ -353,10 +440,10 @@ export default function DashboardView({
         </div>
 
         <div className="bg-white rounded-3xl p-5 sm:p-6 shadow-brand border border-slate-100">
-          <h3 className="font-bold mb-6">Spending by Category (This Month)</h3>
+          <h3 className="font-bold mb-6">Spending by Category ({analyticsBounds.label})</h3>
           <div className="flex flex-col gap-5">
             {categoryTotals.categoryEntries.length === 0 && (
-              <p className="text-sm text-brand-muted">No expense categories yet.</p>
+              <p className="text-sm text-brand-muted">No expense categories in selected range.</p>
             )}
             {categoryTotals.categoryEntries.map(([cat, amount], index) => {
               const percent = (amount / categoryTotals.maxAmount) * 100;

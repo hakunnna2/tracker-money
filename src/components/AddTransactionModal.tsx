@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { Account, Category, Currency, Transaction, TransactionType } from '../types.ts';
-
 const DEFAULT_EXPENSE_CATEGORIES = ['Food', 'Transport', 'Rent', 'Leisure', 'Other'] as const;
 const CUSTOM_CATEGORY_OPTION = '__custom__';
 
@@ -10,11 +9,12 @@ interface AddTransactionModalProps {
   onAdd: (t: Omit<Transaction, 'id'>) => void;
   onUpdate: (t: Transaction) => void;
   editingTransaction: Transaction | null;
+  transactions: Transaction[];
   accounts: Account[];
   currency: Currency;
 }
 
-export default function AddTransactionModal({ onClose, onAdd, onUpdate, editingTransaction, accounts, currency }: AddTransactionModalProps) {
+export default function AddTransactionModal({ onClose, onAdd, onUpdate, editingTransaction, transactions, accounts, currency }: AddTransactionModalProps) {
   const isEditing = Boolean(editingTransaction);
   const initialType = editingTransaction?.type || 'expense';
   const initialCategory = editingTransaction?.category || 'Food';
@@ -35,6 +35,7 @@ export default function AddTransactionModal({ onClose, onAdd, onUpdate, editingT
   const [accountId, setAccountId] = useState(editingTransaction?.accountId || '');
   const [toAccountId, setToAccountId] = useState(editingTransaction?.toAccountId || '');
   const [formError, setFormError] = useState('');
+  const [duplicateAcknowledged, setDuplicateAcknowledged] = useState(false);
 
   const hasValidAmount = Number.isFinite(amount) && amount > 0;
   const hasDescription = description.trim().length > 0;
@@ -53,6 +54,19 @@ export default function AddTransactionModal({ onClose, onAdd, onUpdate, editingT
         ? 'Income'
         : 'Transfer';
   const hasValidCategory = resolvedCategory.length > 0;
+  const normalizedDescription = description.trim().toLowerCase();
+  const hasLikelyDuplicate = useMemo(() => {
+    if (!hasValidAmount || !date || !normalizedDescription) return false;
+
+    return transactions.some((tx) => {
+      if (editingTransaction && tx.id === editingTransaction.id) return false;
+      return tx.amount === amount && tx.date === date && tx.description.trim().toLowerCase() === normalizedDescription;
+    });
+  }, [transactions, editingTransaction, amount, date, normalizedDescription, hasValidAmount]);
+
+  useEffect(() => {
+    setDuplicateAcknowledged(false);
+  }, [type, amount, date, normalizedDescription, accountId, toAccountId]);
   const canSubmit =
     hasValidAmount &&
     hasDescription &&
@@ -258,6 +272,11 @@ export default function AddTransactionModal({ onClose, onAdd, onUpdate, editingT
 
           {formError && <p className="text-xs text-brand-danger font-semibold">{formError}</p>}
 
+          {hasLikelyDuplicate && (
+            <p className="text-xs text-amber-700 font-semibold bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              Possible duplicate: same amount, date, and description already exists.
+            </p>
+          )}
           <button
             onClick={() => {
               if (!hasValidAmount) {
@@ -293,6 +312,11 @@ export default function AddTransactionModal({ onClose, onAdd, onUpdate, editingT
                 return;
               }
 
+              if (hasLikelyDuplicate && !duplicateAcknowledged) {
+                setFormError('Possible duplicate detected. Click again to save anyway.');
+                setDuplicateAcknowledged(true);
+                return;
+              }
               const payload = {
                 amount,
                 type,
@@ -317,7 +341,15 @@ export default function AddTransactionModal({ onClose, onAdd, onUpdate, editingT
             disabled={!canSubmit}
             className="w-full bg-brand-blue text-white py-4 rounded-2xl font-bold text-lg hover:bg-blue-600 transition-all shadow-lg shadow-blue-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isEditing ? 'Save Changes' : type === 'transfer' ? 'Confirm Transfer' : 'Add Transaction'}
+            {hasLikelyDuplicate && duplicateAcknowledged
+              ? isEditing
+                ? 'Save Anyway'
+                : 'Add Anyway'
+              : isEditing
+                ? 'Save Changes'
+                : type === 'transfer'
+                  ? 'Confirm Transfer'
+                  : 'Add Transaction'}
           </button>
 
           {!canSubmit && (
