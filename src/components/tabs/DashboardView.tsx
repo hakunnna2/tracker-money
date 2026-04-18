@@ -170,31 +170,30 @@ export default function DashboardView({
     const selectedDate = new Date(now);
     selectedDate.setDate(now.getDate() - selectedDayOffset);
 
-    const daysInMonth = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0).getDate();
-    const todaySpent = transactions
-      .filter((t) => {
-        if (t.type !== 'expense') return false;
-        const d = parseLocalDate(t.date);
-        return (
-          t.accountId === walletAccount?.id &&
-          d.getDate() === selectedDate.getDate() &&
-          d.getMonth() === selectedDate.getMonth() &&
-          d.getFullYear() === selectedDate.getFullYear()
-        );
-      })
-      .reduce((sum, t) => sum + t.amount, 0);
+    const dailyExpenseTransactions = transactions.filter((t) => {
+      if (t.type !== 'expense') return false;
+      const d = parseLocalDate(t.date);
+      return (
+        t.accountId === walletAccount?.id &&
+        d.getDate() === selectedDate.getDate() &&
+        d.getMonth() === selectedDate.getMonth() &&
+        d.getFullYear() === selectedDate.getFullYear()
+      );
+    });
 
-    const dailyTarget = budget.monthlyLimit / Math.max(daysInMonth, 1);
-    const progressRaw = (todaySpent / (dailyTarget || 1)) * 100;
-    const progress = Math.min(100, progressRaw);
-    const budgetLeft = dailyTarget - todaySpent;
+    const todaySpent = dailyExpenseTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const categoryMap: Record<string, number> = {};
+    for (const tx of dailyExpenseTransactions) {
+      categoryMap[tx.category] = (categoryMap[tx.category] || 0) + tx.amount;
+    }
+    const whereEntries = Object.entries(categoryMap).sort((a, b) => b[1] - a[1]).slice(0, 3);
 
-    return { todaySpent, dailyTarget, budgetLeft, progress, progressRaw, selectedDate };
+    return { todaySpent, selectedDate, whereEntries };
   }, [transactions, budget.monthlyLimit, walletAccount, selectedDayOffset]);
 
   const circleRadius = 48;
   const circleCircumference = 2 * Math.PI * circleRadius;
-  const circleOffset = circleCircumference - (dailyStats.progress / 100) * circleCircumference;
+  const circleOffset = dailyStats.todaySpent > 0 ? 0 : circleCircumference;
 
   return (
     <motion.div
@@ -227,7 +226,7 @@ export default function DashboardView({
             <div className="flex justify-between text-[11px] font-bold">
               <span>{Math.round(budgetSpentPercent)}% Spent</span>
               <span className="text-brand-muted">
-                {formatCurrency(Math.max(0, budget.monthlyLimit - stats.currentMonthExpenses), currency)} Left
+                {formatCurrency(stats.totalBalance, currency)} Left in Wallet
               </span>
             </div>
           </div>
@@ -241,9 +240,6 @@ export default function DashboardView({
                 <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-brand-danger">
                   {formatCurrency(dailyStats.todaySpent, currency)}
                 </h3>
-                <p className="text-xs text-brand-muted mt-2">
-                  Budget left: {formatCurrency(Math.max(0, dailyStats.budgetLeft), currency)}
-                </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button
@@ -271,6 +267,16 @@ export default function DashboardView({
                 year: 'numeric',
               })}
             </p>
+            <div className="mt-2 space-y-1">
+              {dailyStats.whereEntries.length === 0 && (
+                <p className="text-xs text-brand-muted">Where: no expenses</p>
+              )}
+              {dailyStats.whereEntries.map(([cat, amount]) => (
+                <p key={cat} className="text-xs text-brand-muted">
+                  {cat}: {formatCurrency(amount, currency)}
+                </p>
+              ))}
+            </div>
           </div>
 
           <div className="relative w-28 h-28 shrink-0">
@@ -280,7 +286,7 @@ export default function DashboardView({
                 cx="60"
                 cy="60"
                 r={circleRadius}
-                stroke={dailyStats.progressRaw > 100 ? '#ef4444' : '#3b82f6'}
+                stroke={dailyStats.todaySpent > 0 ? '#3b82f6' : '#cbd5e1'}
                 strokeWidth="10"
                 fill="none"
                 strokeLinecap="round"
